@@ -12,6 +12,7 @@ import (
 )
 
 type Server struct {
+	resPath string
 }
 
 // response Struct to return JSON.
@@ -69,8 +70,22 @@ func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
 	ageSex := strings.TrimSpace(r.Form.Get("age_sex"))
 	prescription := strings.TrimSpace(r.Form.Get("prescription"))
 
+	// Create name for file <name>-<timestamp>.
+	loc, _ := time.LoadLocation("Asia/Kolkata") // Always print date/time in India time.
+	now := time.Now().In(loc)
+	date := now.Format("2-Jan-2006_3:04_pm")
+	fname := fmt.Sprintf("%s-%s.pdf", name, date)
+
+	fpath := fmt.Sprintf("./resources/prescriptions/%s", fname)
+
+	if err := createPDF(name, ageSex, prescription, fpath); err != nil {
+		writeResponse(w, &response{
+			Err: fmt.Sprintf("Failed to create PDF:%v", err),
+		})
+	}
+
 	writeResponse(w, &response{
-		Data: fmt.Sprintf("%s %s %s", name, ageSex, prescription),
+		Data: fmt.Sprintf("/prescriptions/%s ", fname),
 	})
 
 }
