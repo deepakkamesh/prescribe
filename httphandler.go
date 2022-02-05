@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -21,43 +22,56 @@ type response struct {
 	Data interface{}
 }
 
-// writeResponse writes the response json object to w. If unable to marshal
-// it writes a http 500.
-func writeResponse(w http.ResponseWriter, resp *response) {
-	w.Header().Set("Content-Type", "application/json")
-	js, e := json.Marshal(resp)
-	if e != nil {
-		http.Error(w, e.Error(), http.StatusInternalServerError)
-		return
-	}
-	log.Printf("Writing json response %s", js)
-	w.Write(js)
-}
-
+// NewServer returns an initialized server.
 func NewServer() *Server {
 	return &Server{}
 }
+
+// Start starts the http server.
 func (s *Server) Start(resPath string, prescriptionsPath string, hostPort string) error {
 
 	// Http routers.
 	http.HandleFunc("/api/status", s.status)
 	http.HandleFunc("/api/genpdf", s.generatePDF)
+	http.HandleFunc("/api/print", s.print)
 
 	// TODO: Setup basic auth.
 
 	// Serve static content from resources dir.
 	fs := http.FileServer(http.Dir(resPath))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fs.ServeHTTP(w, r)
+		if checkAuth(w, r) {
+			fs.ServeHTTP(w, r)
+			return
+		}
+
+		w.Header().Set("WWW-Authenticate", `Basic realm="MY REALM"`)
+		w.WriteHeader(401)
+		w.Write([]byte("401 Unauthorized\n"))
 	})
 
 	// TODO: Setup SSL.
 	return http.ListenAndServe(hostPort, nil)
 }
 
+// print prints the pdf file that was generated.
+func (s *Server) print(w http.ResponseWriter, r *http.Request) {
+}
+
 // status returns the system status including status of printer and other key system metrics.
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 
+	if err := checkSystemHealth(); err != nil {
+		writeResponse(w, &response{
+			Err: fmt.Sprintf("System Error: %v", err),
+		})
+		log.Printf("System health check error : %v", err)
+		return
+	}
+
+	writeResponse(w, &response{
+		Data: "ok",
+	})
 }
 
 // generatePDF creates the PDF file.
@@ -73,7 +87,7 @@ func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
 	// Create name for file <name>-<timestamp>.
 	loc, _ := time.LoadLocation("Asia/Kolkata") // Always print date/time in India time.
 	now := time.Now().In(loc)
-	date := now.Format("2-Jan-2006_3:04_pm")
+	date := now.Format("2-Jan-2006_3:04:05_pm")
 	fname := fmt.Sprintf("%s-%s.pdf", name, date)
 
 	fpath := fmt.Sprintf("./resources/prescriptions/%s", fname)
@@ -82,6 +96,7 @@ func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
 		writeResponse(w, &response{
 			Err: fmt.Sprintf("Failed to create PDF:%v", err),
 		})
+		log.Printf("Error creating PDF: %v", err)
 		return
 	}
 
@@ -91,6 +106,16 @@ func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// checkSystemHealth checks the health of key system parameters.
+func checkSystemHealth() error {
+
+	// check printer.
+	return nil
+
+}
+
+// createPDF generates a prescription PDF and stores the pdf in the file path specified
+// by fname.
 func createPDF(name string, ageSex string, prescription string, fname string) error {
 	pdf := fpdf.New("P", "pt", "A4", "")
 	pdf.SetLeftMargin(50.0)
@@ -141,5 +166,37 @@ func createPDF(name string, ageSex string, prescription string, fname string) er
 
 	// Create pdf.
 	return pdf.OutputFileAndClose(fname)
+}
 
+// writeResponse writes the response json object to w. If unable to marshal
+// it writes a http 500.
+func writeResponse(w http.ResponseWriter, resp *response) {
+	w.Header().Set("Content-Type", "application/json")
+	js, e := json.Marshal(resp)
+	if e != nil {
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+		return
+	}
+	//	log.Printf("Writing json response %s", js)
+	w.Write(js)
+}
+
+// checkAuth does basic validation.
+func checkAuth(w http.ResponseWriter, r *http.Request) bool {
+	s := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+	if len(s) != 2 {
+		return false
+	}
+
+	b, err := base64.StdEncoding.DecodeString(s[1])
+	if err != nil {
+		return false
+	}
+
+	pair := strings.SplitN(string(b), ":", 2)
+	if len(pair) != 2 {
+		return false
+	}
+
+	return pair[0] == "guru" && pair[1] == "Karaneeswarar"
 }
