@@ -56,6 +56,18 @@ func (s *Server) Start(resPath string, prescriptionsPath string, hostPort string
 
 // print prints the pdf file that was generated.
 func (s *Server) print(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		fmt.Fprintf(w, "Error: %v", err)
+		return
+	}
+
+	fname := strings.TrimSpace(r.Form.Get("file"))
+	fmt.Println(fname)
+
+	writeResponse(w, &response{
+		Data: "ok",
+	})
+
 }
 
 // status returns the system status including status of printer and other key system metrics.

@@ -15,11 +15,21 @@ $(document).ready(function() {
   };
   setInterval(status_check, 5000);
 
+  var currPrescription = ""; // Filename of current prescription.
+
   // Generate PDF button handler.
   document.querySelector('#generate_pdf').addEventListener('click', function() {
     name = $('#name').val();
     age_sex = $('#age_sex').val();
     prescription = $('#prescription').val();
+
+    // Do some basic validation.
+    if ($.trim(name) == "" || $.trim(age_sex) == "" ||
+        $.trim(prescription) == "") {
+      errorContainer.MaterialSnackbar.showSnackbar(
+          {message : "Name, Age/Sex or Prescription cannot be empty!"});
+      return
+    }
 
     $.post('/api/genpdf',
            {name : name, age_sex : age_sex, prescription : prescription},
@@ -30,6 +40,7 @@ $(document).ready(function() {
                    {message : data.Err});
                return;
              }
+             currPrescription = data.Data;
              window.open(data.Data, "_blank");
            });
   });
@@ -39,11 +50,23 @@ $(document).ready(function() {
     $('#name').val("");
     $('#age_sex').val("");
     $('#prescription').val("");
+    currPrescription = "";
   });
 
   // Print PDF button handler.
   document.querySelector('#print').addEventListener('click', function() {
-    console.log("dd");
-    errorContainer.MaterialSnackbar.showSnackbar({message : "sdsd"});
+    if (currPrescription == "") {
+      errorContainer.MaterialSnackbar.showSnackbar(
+          {message : "Nothing to print!"});
+      return;
+    }
+    $.post('/api/print', {file : currPrescription}, function(data, status) {
+      if (data.Err != '') {
+        console.log(data.Err);
+        errorContainer.MaterialSnackbar.showSnackbar({message : data.Err});
+        return;
+      }
+      errorContainer.MaterialSnackbar.showSnackbar({message : "Print Sent"});
+    });
   });
 });
