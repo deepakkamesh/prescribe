@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -13,7 +14,8 @@ import (
 )
 
 type Server struct {
-	resPath string
+	resPath   string
+	mockPrint bool
 }
 
 // response Struct to return JSON.
@@ -23,8 +25,10 @@ type response struct {
 }
 
 // NewServer returns an initialized server.
-func NewServer() *Server {
-	return &Server{}
+func NewServer(mockPrint bool) *Server {
+	return &Server{
+		mockPrint: mockPrint,
+	}
 }
 
 // Start starts the http server.
@@ -62,16 +66,39 @@ func (s *Server) print(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fname := strings.TrimSpace(r.Form.Get("file"))
-	fmt.Println(fname)
+	fpath := fmt.Sprintf("./resources%s", fname)
+
+	cmd := "lp"
+	arg1 := "-o print-quality=3"
+	if s.mockPrint {
+		cmd = "stat"
+		arg1 = "-t"
+	}
+
+	out, err := exec.Command(cmd, arg1, fpath).Output()
+	if err != nil {
+		writeResponse(w, &response{
+			Err: fmt.Sprintf("Print Error: %v", err),
+		})
+		log.Printf("Print Error : %v", err)
+		return
+	}
 
 	writeResponse(w, &response{
-		Data: "ok",
+		Data: string(out[:]),
 	})
 
 }
 
 // status returns the system status including status of printer and other key system metrics.
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
+
+	// If mocking Printer, ignore and return true for status.
+	if s.mockPrint {
+		writeResponse(w, &response{
+			Data: "ok",
+		})
+	}
 
 	if err := checkSystemHealth(); err != nil {
 		writeResponse(w, &response{
@@ -118,10 +145,14 @@ func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// checkSystemHealth checks the health of key system parameters.
+// TODO: checkSystemHealth checks the health of key system parameters.
 func checkSystemHealth() error {
 
-	// check printer.
+	// Check is printer is connected by usb.
+	if _, err := exec.Command("lsusb", "|", "grep", "Canon").Output(); err != nil {
+		return fmt.Errorf("lsusb failed to find canon: %v", err)
+	}
+
 	return nil
 
 }

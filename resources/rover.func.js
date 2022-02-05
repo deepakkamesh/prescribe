@@ -66,7 +66,7 @@ $(document).ready(function() {
         errorContainer.MaterialSnackbar.showSnackbar({message : data.Err});
         return;
       }
-      errorContainer.MaterialSnackbar.showSnackbar({message : "Print Sent"});
+      errorContainer.MaterialSnackbar.showSnackbar({message : data.Data});
     });
   });
 });
