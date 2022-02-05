@@ -13,6 +13,8 @@ $(document).ready(function() {
            function(data, status) {
              if (data.Err != '') {
                console.log(data.Err);
+               errorContainer.MaterialSnackbar.showSnackbar(
+                   {message : data.Err});
                return
              }
              window.open(data.Data, "_blank");

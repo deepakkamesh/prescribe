@@ -82,6 +82,7 @@ func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
 		writeResponse(w, &response{
 			Err: fmt.Sprintf("Failed to create PDF:%v", err),
 		})
+		return
 	}
 
 	writeResponse(w, &response{
@@ -140,4 +141,5 @@ func createPDF(name string, ageSex string, prescription string, fname string) er
 
 	// Create pdf.
 	return pdf.OutputFileAndClose(fname)
+
 }
