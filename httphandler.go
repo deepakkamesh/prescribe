@@ -16,6 +16,7 @@ import (
 type Server struct {
 	resPath   string
 	mockPrint bool
+	hostPort  string
 }
 
 // response Struct to return JSON.
@@ -25,14 +26,16 @@ type response struct {
 }
 
 // NewServer returns an initialized server.
-func NewServer(mockPrint bool) *Server {
+func NewServer(mockPrint bool, resPath string, hostPort string) *Server {
 	return &Server{
 		mockPrint: mockPrint,
+		resPath:   resPath,
+		hostPort:  hostPort,
 	}
 }
 
 // Start starts the http server.
-func (s *Server) Start(resPath string, prescriptionsPath string, hostPort string) error {
+func (s *Server) Start() error {
 
 	// Http routers.
 	http.HandleFunc("/api/status", s.status)
@@ -42,7 +45,7 @@ func (s *Server) Start(resPath string, prescriptionsPath string, hostPort string
 	// TODO: Setup basic auth.
 
 	// Serve static content from resources dir.
-	fs := http.FileServer(http.Dir(resPath))
+	fs := http.FileServer(http.Dir(s.resPath))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if checkAuth(w, r) {
 			fs.ServeHTTP(w, r)
@@ -55,7 +58,7 @@ func (s *Server) Start(resPath string, prescriptionsPath string, hostPort string
 	})
 
 	// TODO: Setup SSL.
-	return http.ListenAndServe(hostPort, nil)
+	return http.ListenAndServe(s.hostPort, nil)
 }
 
 // print prints the pdf file that was generated.
@@ -66,7 +69,7 @@ func (s *Server) print(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fname := strings.TrimSpace(r.Form.Get("file"))
-	fpath := fmt.Sprintf("./resources%s", fname)
+	fpath := fmt.Sprintf("%s%s", s.resPath, fname)
 
 	cmd := "lp"
 	arg1 := "-o print-quality=3"
@@ -80,7 +83,7 @@ func (s *Server) print(w http.ResponseWriter, r *http.Request) {
 		writeResponse(w, &response{
 			Err: fmt.Sprintf("Print Error: %v", err),
 		})
-		log.Printf("Print Error : %v", err)
+		log.Printf("Print Error %v : %v", fname, err)
 		return
 	}
 
@@ -98,6 +101,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 		writeResponse(w, &response{
 			Data: "ok",
 		})
+		return
 	}
 
 	if err := checkSystemHealth(); err != nil {
@@ -129,7 +133,7 @@ func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
 	date := now.Format("2-Jan-2006_3:04:05_pm")
 	fname := fmt.Sprintf("%s-%s.pdf", name, date)
 
-	fpath := fmt.Sprintf("./resources/prescriptions/%s", fname)
+	fpath := fmt.Sprintf("%s/prescriptions/%s", s.resPath, fname)
 
 	if err := createPDF(name, ageSex, prescription, fpath); err != nil {
 		writeResponse(w, &response{
@@ -148,13 +152,12 @@ func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
 // TODO: checkSystemHealth checks the health of key system parameters.
 func checkSystemHealth() error {
 
-	// Check is printer is connected by usb.
-	if _, err := exec.Command("lsusb", "|", "grep", "Canon").Output(); err != nil {
+	// Check is printer is connected by usb using device id.
+	if _, err := exec.Command("lsusb", "-d", "04a9:182b").Output(); err != nil {
 		return fmt.Errorf("lsusb failed to find canon: %v", err)
 	}
 
 	return nil
-
 }
 
 // createPDF generates a prescription PDF and stores the pdf in the file path specified
