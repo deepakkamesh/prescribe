@@ -42,8 +42,6 @@ func (s *Server) Start() error {
 	http.HandleFunc("/api/genpdf", s.generatePDF)
 	http.HandleFunc("/api/print", s.print)
 
-	// TODO: Setup basic auth.
-
 	// Serve static content from resources dir.
 	fs := http.FileServer(http.Dir(s.resPath))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +61,7 @@ func (s *Server) Start() error {
 
 // print prints the pdf file that was generated.
 func (s *Server) print(w http.ResponseWriter, r *http.Request) {
+
 	if err := r.ParseForm(); err != nil {
 		fmt.Fprintf(w, "Error: %v", err)
 		return
@@ -71,6 +70,7 @@ func (s *Server) print(w http.ResponseWriter, r *http.Request) {
 	fname := strings.TrimSpace(r.Form.Get("file"))
 	fpath := fmt.Sprintf("%s%s", s.resPath, fname)
 
+	// If mocking, just do a stat on file.
 	cmd := "lp"
 	arg1 := "-o print-quality=3"
 	if s.mockPrint {
@@ -87,6 +87,7 @@ func (s *Server) print(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If Exec is successful, send back command output.
 	writeResponse(w, &response{
 		Data: string(out[:]),
 	})
@@ -119,6 +120,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 
 // generatePDF creates the PDF file.
 func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
+
 	if err := r.ParseForm(); err != nil {
 		fmt.Fprintf(w, "Error: %v", err)
 		return
@@ -143,13 +145,13 @@ func (s *Server) generatePDF(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Send prescription file name back to frontend.
 	writeResponse(w, &response{
 		Data: fmt.Sprintf("/prescriptions/%s ", fname),
 	})
-
 }
 
-// TODO: checkSystemHealth checks the health of key system parameters.
+// checkSystemHealth checks the health of key system parameters.
 func checkSystemHealth() error {
 
 	// Check is printer is connected by usb using device id.
