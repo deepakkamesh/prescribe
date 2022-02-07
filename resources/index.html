@@ -87,11 +87,16 @@ limitations under the License
 
 <!-- SIDE NAV BAR -->
      <nav class="mdl-navigation">
-                          <ul>
+                <ul>
                                   Remote Volume
                     <input id="fps_sel" class="mdl-slider mdl-js-slider" type="range" min="1" max="30" value="5" tabindex="0">
                 </ul>
-               
+                 <ul>
+                    <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="video_enable">
+										  <input type="checkbox" id="video_enable" class="mdl-switch__input" >
+									    <span class="mdl-switch__label"> Video Stream</span>
+								    </label>
+                </ul> 
             </nav>
         </div>
 
@@ -130,6 +135,11 @@ limitations under the License
         <button id = "print" class = "mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent"> Print </button>  &emsp;
         <button id = "clear" class = "mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent"> Clear </button>  &emsp;
 </div>
+
+<!-- Video Stream -->
+  <div class="mdl-cell mdl-cell--6-col">
+                    <img id="video_stream" width=100%>
+  </div>
 
 <!-- SnackBar for error -->
 <div id = "error-popup" class = "mdl-js-snackbar mdl-snackbar"> 

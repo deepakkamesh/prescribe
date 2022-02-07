@@ -53,6 +53,17 @@ $(document).ready(function() {
     currPrescription = "";
   });
 
+  // Video Enable button handler.
+  document.querySelector('#video_enable').addEventListener('click', function() {
+    if (document.getElementById('video_enable').checked) {
+      $("#video_stream")
+          .attr("src", "http://192.168.0.131:8888/videostream" +
+                           '?' + Math.random());
+    } else {
+      $("#video_stream").attr("src", "");
+    }
+  });
+
   // Print PDF button handler.
   document.querySelector('#print').addEventListener('click', function() {
     if (currPrescription == "") {
