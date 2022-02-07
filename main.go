@@ -12,7 +12,10 @@ func main() {
 		httpHostPort = flag.String("http_port", ":8080", "host:port number for http")
 		mockPrint    = flag.Bool("mock_print", false, "true runs stat on file instead of printing")
 		logPath      = flag.String("log_file", "./prescribe.log", "log file location")
-		teslongVideo = flag.String("teslong_video", "/dev/video4", "Video device for teslong")
+		vidDevice    = flag.String("video_device", "/dev/video4", "Video device for teslong")
+		vidH         = flag.Int("video_height", 480, "video height")
+		vidW         = flag.Int("video_width", 640, "video width")
+		vidFrame     = flag.Int("video_frame_rate", 10, "video frame rate")
 	)
 
 	flag.Parse()
@@ -31,8 +34,7 @@ func main() {
 	log.Print("Starting Prescribe - Remote Prescription")
 
 	// Start Teslong Video.
-	// TODO: make resolution and fps command param.
-	vid := NewVideo(YUYV422, 640, 480, 10, *teslongVideo)
+	vid := NewVideo(YUYV422, uint32(*vidW), uint32(*vidH), uint(*vidFrame), *vidDevice)
 
 	if err := vid.StartVideoStream(); err != nil {
 		log.Printf("Failed to start Teslong Camera: %v", err)
