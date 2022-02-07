@@ -95,13 +95,17 @@ func (s *Video) StartVideoStream() error {
 	return nil
 }
 
-func (s *Video) StopVideoStream() {
+func (s *Video) StopVideoStream() error {
 	if s.capStatus {
 		s.stop <- struct{}{}
+		if err := s.cam.StopStreaming(); err != nil {
+			return err
+		}
 		if err := s.cam.Close(); err != nil {
-			log.Printf("Failed to stop stream:%v", err)
+			return err
 		}
 	}
+	return nil
 }
 
 func (s *Video) startStreamer() {

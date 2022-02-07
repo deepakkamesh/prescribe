@@ -125,7 +125,9 @@ func (s *Server) videoctl(w http.ResponseWriter, r *http.Request) {
 
 	// Stop Video Stream.
 	if videoEnable == "false" {
-		s.video.StopVideoStream()
+		if err := s.video.StopVideoStream(); err != nil {
+			log.Printf("Failed to stop streaming:%v", err)
+		}
 		writeResponse(w, &response{
 			Data: "ok",
 		})
