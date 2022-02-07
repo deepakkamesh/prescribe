@@ -13,7 +13,7 @@ $(document).ready(function() {
       }
     });
   };
-  setInterval(status_check, 5000);
+  setInterval(status_check, 10000);
 
   var currPrescription = ""; // Filename of current prescription.
 
@@ -57,7 +57,7 @@ $(document).ready(function() {
   document.querySelector('#video_enable').addEventListener('click', function() {
     if (document.getElementById('video_enable').checked) {
       $("#video_stream")
-          .attr("src", "http://192.168.0.131:8888/videostream" +
+          .attr("src", "/videostream" +
                            '?' + Math.random());
     } else {
       $("#video_stream").attr("src", "");

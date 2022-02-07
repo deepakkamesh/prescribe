@@ -12,6 +12,7 @@ func main() {
 		httpHostPort = flag.String("http_port", ":8080", "host:port number for http")
 		mockPrint    = flag.Bool("mock_print", false, "true runs stat on file instead of printing")
 		logPath      = flag.String("log_file", "./prescribe.log", "log file location")
+		teslongVideo = flag.String("teslong_video", "/dev/video4", "Video device for teslong")
 	)
 
 	flag.Parse()
@@ -29,7 +30,16 @@ func main() {
 
 	log.Print("Starting Prescribe - Remote Prescription")
 
-	http := NewServer(*mockPrint, *resPath, *httpHostPort)
+	// Start Teslong Video.
+	// TODO: make resolution and fps command param.
+	vid := NewVideo(YUYV422, 640, 480, 10, *teslongVideo)
+
+	if err := vid.StartVideoStream(); err != nil {
+		log.Printf("Failed to start Teslong Camera: %v", err)
+	}
+
+	// Start HTTP service.
+	http := NewServer(*mockPrint, *resPath, *httpHostPort, vid)
 	if err := http.Start(); err != nil {
 		log.Fatalf("HTTP start failed with %v", err)
 	}

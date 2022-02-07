@@ -17,6 +17,7 @@ type Server struct {
 	resPath   string
 	mockPrint bool
 	hostPort  string
+	tesVideo  *Video // Teslong Video device.
 }
 
 // response Struct to return JSON.
@@ -26,11 +27,12 @@ type response struct {
 }
 
 // NewServer returns an initialized server.
-func NewServer(mockPrint bool, resPath string, hostPort string) *Server {
+func NewServer(mockPrint bool, resPath string, hostPort string, tesVideo *Video) *Server {
 	return &Server{
 		mockPrint: mockPrint,
 		resPath:   resPath,
 		hostPort:  hostPort,
+		tesVideo:  tesVideo,
 	}
 }
 
@@ -41,6 +43,8 @@ func (s *Server) Start() error {
 	http.HandleFunc("/api/status", s.status)
 	http.HandleFunc("/api/genpdf", s.generatePDF)
 	http.HandleFunc("/api/print", s.print)
+
+	http.Handle("/videostream", s.tesVideo.Stream)
 
 	// Serve static content from resources dir.
 	fs := http.FileServer(http.Dir(s.resPath))
