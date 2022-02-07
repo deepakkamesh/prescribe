@@ -56,10 +56,28 @@ $(document).ready(function() {
   // Video Enable button handler.
   document.querySelector('#video_enable').addEventListener('click', function() {
     if (document.getElementById('video_enable').checked) {
+      // Enable Video Stream.
+      $.post('/api/videoctl', {video_enable : "true"}, function(data, status) {
+        if (data.Err != '') {
+          console.log(data.Err);
+          errorContainer.MaterialSnackbar.showSnackbar({message : data.Err});
+          return;
+        }
+      });
+      // Set the src on the video html element.
       $("#video_stream")
           .attr("src", "/videostream" +
                            '?' + Math.random());
     } else {
+      // Disable Video Stream.
+      $.post('/api/videoctl', {video_enable : "false"}, function(data, status) {
+        if (data.Err != '') {
+          console.log(data.Err);
+          errorContainer.MaterialSnackbar.showSnackbar({message : data.Err});
+          return;
+        }
+      });
+      // Unset the src on html element.
       $("#video_stream").attr("src", "");
     }
   });

@@ -17,7 +17,7 @@ type Server struct {
 	resPath   string
 	mockPrint bool
 	hostPort  string
-	tesVideo  *Video // Teslong Video device.
+	video     *Video // Teslong Video device.
 }
 
 // response Struct to return JSON.
@@ -32,7 +32,7 @@ func NewServer(mockPrint bool, resPath string, hostPort string, tesVideo *Video)
 		mockPrint: mockPrint,
 		resPath:   resPath,
 		hostPort:  hostPort,
-		tesVideo:  tesVideo,
+		video:     tesVideo,
 	}
 }
 
@@ -43,8 +43,9 @@ func (s *Server) Start() error {
 	http.HandleFunc("/api/status", s.status)
 	http.HandleFunc("/api/genpdf", s.generatePDF)
 	http.HandleFunc("/api/print", s.print)
+	http.HandleFunc("/api/videoctl", s.videoctl)
 
-	http.Handle("/videostream", s.tesVideo.Stream)
+	http.Handle("/videostream", s.video.Stream)
 
 	// Serve static content from resources dir.
 	fs := http.FileServer(http.Dir(s.resPath))
@@ -96,6 +97,46 @@ func (s *Server) print(w http.ResponseWriter, r *http.Request) {
 		Data: string(out[:]),
 	})
 
+}
+
+// videoctl manages the enable or disable of video stream.
+func (s *Server) videoctl(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		fmt.Fprintf(w, "Error: %v", err)
+		return
+	}
+
+	videoEnable := strings.TrimSpace(r.Form.Get("video_enable"))
+
+	// Start Video Stream.
+	if videoEnable == "true" {
+		if err := s.video.StartVideoStream(); err != nil {
+			writeResponse(w, &response{
+				Err: fmt.Sprintf("Video Start Error: %v", err),
+			})
+			log.Printf("Video Start Error %v ", err)
+			return
+		}
+		writeResponse(w, &response{
+			Data: "ok",
+		})
+		return
+	}
+
+	// Stop Video Stream.
+	if videoEnable == "false" {
+		s.video.StopVideoStream()
+		writeResponse(w, &response{
+			Data: "ok",
+		})
+		return
+	}
+
+	// Should never come here.
+	writeResponse(w, &response{
+		Err: "Unknown value for video_enable",
+	})
+	return
 }
 
 // status returns the system status including status of printer and other key system metrics.
