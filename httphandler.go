@@ -14,10 +14,11 @@ import (
 )
 
 type Server struct {
-	resPath   string
-	mockPrint bool
-	hostPort  string
-	video     *Video // Teslong Video device.
+	resPath     string
+	mockPrint   bool
+	hostPort    string
+	video       *Video // Teslong Video device.
+	altVideoURL string // External Video URL.
 }
 
 // response Struct to return JSON.
@@ -27,12 +28,13 @@ type response struct {
 }
 
 // NewServer returns an initialized server.
-func NewServer(mockPrint bool, resPath string, hostPort string, tesVideo *Video) *Server {
+func NewServer(mockPrint bool, resPath string, hostPort string, tesVideo *Video, altVideoURL string) *Server {
 	return &Server{
-		mockPrint: mockPrint,
-		resPath:   resPath,
-		hostPort:  hostPort,
-		video:     tesVideo,
+		mockPrint:   mockPrint,
+		resPath:     resPath,
+		hostPort:    hostPort,
+		video:       tesVideo,
+		altVideoURL: altVideoURL,
 	}
 }
 
@@ -45,7 +47,9 @@ func (s *Server) Start() error {
 	http.HandleFunc("/api/print", s.print)
 	http.HandleFunc("/api/videoctl", s.videoctl)
 
-	http.Handle("/videostream", s.video.Stream)
+	if s.video != nil {
+		http.Handle("/videostream", s.video.Stream)
+	}
 
 	// Serve static content from resources dir.
 	fs := http.FileServer(http.Dir(s.resPath))
@@ -110,28 +114,39 @@ func (s *Server) videoctl(w http.ResponseWriter, r *http.Request) {
 
 	// Start Video Stream.
 	if videoEnable == "true" {
-		if err := s.video.StartVideoStream(); err != nil {
+		if s.video != nil {
+			if err := s.video.StartVideoStream(); err != nil {
+				writeResponse(w, &response{
+					Err: fmt.Sprintf("Video Start Error: %v", err),
+				})
+				log.Printf("Video Start Error %v ", err)
+				return
+			}
+
 			writeResponse(w, &response{
-				Err: fmt.Sprintf("Video Start Error: %v", err),
+				Data: "/videostream",
 			})
-			log.Printf("Video Start Error %v ", err)
 			return
 		}
+
 		writeResponse(w, &response{
-			Data: "ok",
+			Data: s.altVideoURL,
 		})
 		return
 	}
 
 	// Stop Video Stream.
 	if videoEnable == "false" {
-		if err := s.video.StopVideoStream(); err != nil {
-			log.Printf("Failed to stop streaming:%v", err)
+		if s.video != nil {
+			if err := s.video.StopVideoStream(); err != nil {
+				log.Printf("Failed to stop streaming:%v", err)
+			}
 		}
 		writeResponse(w, &response{
 			Data: "ok",
 		})
 		return
+
 	}
 
 	// Should never come here.
